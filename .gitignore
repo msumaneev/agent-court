@@ -57,9 +57,23 @@ cover/
 *~
 .DS_Store
 
-# AgentCourt runtime logs and temp reports
+# AgentCourt runtime logs, audits, test results and personal artifacts
 reports/
+audit_results/
+test_results/
+test-reports/
+results/
+dockets/
+patches/
+*.patch
+*.diff
 *.log
+*.audit.json
+*.report.html
+*.report.json
 scratch/
 transcripts/
 articles/
+local/
+personal/
+.agentcourt/
