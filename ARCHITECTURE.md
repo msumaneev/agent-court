@@ -120,11 +120,33 @@ Defines canonical typing and schema contracts using Pydantic v2 / dataclasses:
 
 ## 4. Empirical Validation Benchmark
 
-Battle-tested on **55,680 production agent steps across 184 enterprise sessions**:
+Battle-tested on **55,680 production agent steps across 184 enterprise sessions** (and 54,374 steps / 203 sessions in v0.3.0):
 * **Runtime:** 7.8 seconds on standard commodity CPU.
 * **Tokens Spent in Phase 1:** Exactly 0 LLM tokens.
-* **Raw Heuristic Triggers:** 283 suspect incidents.
-* **Acquittals by Defense Counsel:** 194 cases (68.6% noise reduction).
-* **True Systemic Failures:** 89 convicted incidents.
-* **Supreme Court Class Actions:** Exactly 4 consolidated rulings.
+* **Raw Heuristic Triggers:** 283 suspect incidents (582 in v0.3.0 extended run).
+* **Acquittals by Defense Counsel:** 194 cases / 68.6% noise reduction (301 cases / 51.7% in v0.3.0).
+* **In-Session Contrastive Recoveries Extracted:** 10 real self-recovery trajectories mined at 0 token cost.
+* **Supreme Court Class Actions:** Exactly 4 consolidated rulings with `Cue → Lesson → Evidence` Triads and `SurfaceSpec` routing.
 * **True Friction Index:** Reduced from 0.48% (raw) to **0.16%** (net).
+
+---
+
+## 5. v0.3.0 Architectural Upgrades: Recursive Harnessing (`Harness²` Integration)
+
+Inspired by Google Cloud AI Research & Northwestern University's [***Harness²: Recursive Agent Harnessing for an Open World*** (`arXiv:2610.14224`)](https://github.com/google-research/harness2) (Xu et al., 2026), `AgentCourt v0.3.0` incorporates three core mechanisms adapted for zero-token offline trajectory auditing:
+
+### 5.1. Zero-Token In-Session Contrastive Recovery (`_extract_recovery_evidence`)
+Instead of spawning expensive online candidate rollouts ($N$ parallel runs) to obtain a `Pass vs. Fail` contrast, `FastMiner._extract_recovery_evidence` scans forward up to $K=12$ steps within the *same* session trajectory after an error or loop trigger. If the agent switches tool or argument signature and achieves `status == "DONE"`, the miner records the exact contrastive transition:
+`Failed on <ToolA> -> Recovered at step #M via <ToolB(args)>`.
+
+### 5.2. Structured `ExperienceTriad` (`Cue → Lesson → Evidence`)
+Every `ClassActionRuling` synthesized by `SupremePlenum` includes a validated `ExperienceTriad`:
+- **`cue` (*When*):** Exact environmental or tool-call precondition that should trigger the rule in the agent's attention.
+- **`lesson` (*What*):** Concrete imperative action or fallback strategy.
+- **`evidence` (*Why*):** Empirical cross-session occurrence telemetry + extracted in-session contrastive recoveries.
+
+### 5.3. `SurfaceSpec` Layer Routing & Instruction Entropy Cap (`16 KB`)
+To prevent **Instruction Entropy** (rule bloat in root `AGENTS.md` / `CLAUDE.md` that washes out LLM attention), `check_surface_entropy_budget()` measures the byte size of Always-On instruction files against a `16 KB` (`16,384` bytes) ceiling:
+- **`INVARIANT` Scope:** Only critical global invariants enter `AGENTS.md` when the budget is healthy ($< 85\%$).
+- **`DOMAIN` Scope:** Specialized tool resilience, anti-loop, and horizon rules—or any ruling generated when `AGENTS.md` exceeds $85\%$ of its `16 KB` cap—are automatically routed to modular on-demand files (`rules/anti-loop.md`, `rules/intent-gate.md`, `rules/tool-resilience.md`, `rules/context-horizon.md`).
+

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agent-court"
-version = "0.2.0"
+version = "0.3.0"
 description = "Adversarial Trajectory Auditor & Constitutional Patch Engine for Autonomous AI Coding Agents"
 readme = "README.md"
 authors = [

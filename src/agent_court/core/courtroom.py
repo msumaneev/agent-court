@@ -180,6 +180,7 @@ class Courtroom:
             defense=defense,
             judge_rationale=rationale,
             recommended_action=recommended_action,
+            recovery_evidence=docket.recovery_evidence,
         )
 
     def adjudicate_all(self, dockets: List[DocketItem]) -> List[IndividualVerdict]:

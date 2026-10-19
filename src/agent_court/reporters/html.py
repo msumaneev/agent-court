@@ -27,6 +27,7 @@ def export_html_report(report: AuditReport, output_path: str | Path) -> Path:
                 <p><strong>🏛️ Charge:</strong> {v.accusation.charge}</p>
                 <p><strong>⚖️ Defense:</strong> {v.defense.argument}</p>
                 <p><strong>🧑‍⚖️ Ruling:</strong> {v.judge_rationale}</p>
+                {f'<p style="color: var(--green);"><strong>🔄 Contrastive Recovery:</strong> {v.recovery_evidence}</p>' if v.recovery_evidence else ''}
                 {f'<p class="remedy"><strong>⚡ Action:</strong> {v.recommended_action}</p>' if v.recommended_action and v.status == VerdictStatus.CONVICTED else ''}
             </div>
         </div>
@@ -34,17 +35,27 @@ def export_html_report(report: AuditReport, output_path: str | Path) -> Path:
 
     class_actions_html = ""
     for ca in report.class_actions:
+        triad_html = ""
+        if ca.experience and ca.has_valid_experience:
+            triad_html = f"""
+            <div style="background: rgba(56, 189, 248, 0.08); border-left: 3px solid var(--accent); padding: 10px 14px; margin: 10px 0; border-radius: 4px; font-size: 14px;">
+                <div style="color: var(--accent); font-weight: bold; margin-bottom: 4px;">🧬 ExperienceTriad (Cue → Lesson → Evidence)</div>
+                <div><strong>Cue (When):</strong> {ca.experience.cue}</div>
+                <div><strong>Lesson (What):</strong> {ca.experience.lesson}</div>
+                <div style="color: var(--text-dim);"><strong>Evidence (Why):</strong> {ca.experience.evidence}</div>
+            </div>
+            """
         class_actions_html += f"""
         <div class="card class-action">
             <div class="class-header">
                 <h3>{ca.case_id}: {ca.title}</h3>
-                <span class="badge badge-convicted">{ca.severity.value}</span>
+                <span class="badge badge-convicted">{ca.severity.value} | {ca.patch_scope} → {ca.target_rule_file}</span>
             </div>
             <p><strong>Cause:</strong> {ca.category.value}</p>
             <p><strong>Impact:</strong> {ca.occurrences} occurrences across {ca.sessions_affected} sessions</p>
-            <p><strong>Evidence:</strong> {ca.evidence_summary}</p>
+            {triad_html if triad_html else f'<p><strong>Evidence:</strong> {ca.evidence_summary}</p>'}
             <div class="patch-box">
-                <div class="patch-title">Prescribed Remedy ({ca.target_rule_file}):</div>
+                <div class="patch-title">Prescribed Remedy ({ca.target_rule_file} [{ca.patch_scope}]):</div>
                 <pre><code>{ca.constitutional_remedy}</code></pre>
             </div>
         </div>
@@ -191,6 +202,10 @@ def export_html_report(report: AuditReport, output_path: str | Path) -> Path:
             <div class="metric-card">
                 <div class="metric-val" style="color: var(--green);">{report.true_friction_index:.2f}%</div>
                 <div class="metric-lbl">True Net Friction Index</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-val" style="color: {'var(--yellow)' if report.graduation_recommended else 'var(--green)'};">{report.entropy_budget_pct:.1f}%</div>
+                <div class="metric-lbl">Always-On SurfaceSpec Budget ({round(report.always_on_bytes / 1024.0, 1)} / 16 KB)</div>
             </div>
         </div>
 

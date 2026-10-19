@@ -36,6 +36,8 @@ class DocketFilter:
                 # Keep latest context or highest step
                 if item.incident_step_index > existing.incident_step_index:
                     existing.incident_step_index = item.incident_step_index
+                if not existing.recovery_evidence and item.recovery_evidence:
+                    existing.recovery_evidence = item.recovery_evidence
             else:
                 tracker[key] = len(deduped)
                 deduped.append(item)

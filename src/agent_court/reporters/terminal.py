@@ -39,6 +39,13 @@ def render_terminal_report(report: AuditReport, console: Console | None = None) 
     table.add_row("Convicted Systemic Failures (True Drifts)", f"[red]{report.convicted_count}[/red]")
     table.add_row("Raw Friction Index", f"{report.raw_friction_index:.2f}%")
     table.add_row("True Net Friction Index", f"[bold green]{report.true_friction_index:.2f}%[/bold green]")
+    budget_kb = round(report.always_on_bytes / 1024.0, 1)
+    budget_style = "yellow" if report.graduation_recommended else "green"
+    budget_status = "ROUTED TO DOMAIN" if report.graduation_recommended else "HEALTHY"
+    table.add_row(
+        "Always-On SurfaceSpec Budget",
+        f"[{budget_style}]{budget_kb} / 16.0 KB ({report.entropy_budget_pct:.1f}% — {budget_status})[/{budget_style}]",
+    )
 
     console.print(table)
     console.print()
@@ -61,6 +68,8 @@ def render_terminal_report(report: AuditReport, console: Console | None = None) 
             console.print(f"  [cyan]🏛️ Charge:[/cyan]  {v.accusation.charge}")
             console.print(f"  [yellow]⚖️ Defense:[/yellow] {v.defense.argument}")
             console.print(f"  [magenta]🧑‍⚖️ Ruling:[/magenta]  {v.judge_rationale}")
+            if v.recovery_evidence:
+                console.print(f"  [green]🔄 Contrastive Recovery:[/green] {v.recovery_evidence}")
             if v.recommended_action and v.status == VerdictStatus.CONVICTED:
                 console.print(f"  [dim red]⚡ Remedy:[/dim red]  {v.recommended_action}")
             console.print()
@@ -81,11 +90,20 @@ def render_terminal_report(report: AuditReport, console: Console | None = None) 
             console.print(
                 f"[bold white]Case ID: {ca.case_id}[/bold white] "
                 f"([{sev_color}]Severity: {ca.severity.value}[/{sev_color}] | "
+                f"Scope: [cyan]{ca.patch_scope}[/cyan] → [bold]{ca.target_rule_file}[/bold] | "
                 f"Occurrences: [bold]{ca.occurrences}[/bold] across [bold]{ca.sessions_affected}[/bold] sessions)"
             )
             console.print(f"[bold]Title:[/bold]   {ca.title}")
             console.print(f"[bold]Cause:[/bold]   {ca.category.value}")
-            console.print(f"[dim]Evidence:[/dim] {ca.evidence_summary}")
+            if ca.experience and ca.has_valid_experience:
+                console.print("  [bold cyan]🧬 ExperienceTriad (Harness² arXiv:2610.14224):[/bold cyan]")
+                console.print(f"    [yellow]• Cue:[/yellow]      {ca.experience.cue}")
+                console.print(f"    [green]• Lesson:[/green]   {ca.experience.lesson}")
+                console.print(f"    [dim]• Evidence:[/dim] {ca.experience.evidence}")
+            else:
+                console.print(f"[dim]Evidence:[/dim] {ca.evidence_summary}")
+            if ca.recovery_contrasts:
+                console.print(f"  [green]🔄 In-Session Contrastive Recovery:[/green] {ca.recovery_contrasts[0]}")
             console.print()
             console.print(f"[bold green]📜 Prescribed Constitutional Remedy (Target: {ca.target_rule_file}):[/bold green]")
             
@@ -94,7 +112,7 @@ def render_terminal_report(report: AuditReport, console: Console | None = None) 
                 ca.constitutional_remedy,
                 style="green",
                 border_style="green",
-                title=f"Patch for {ca.target_rule_file}",
+                title=f"Patch for {ca.target_rule_file} [{ca.patch_scope}]",
             )
             console.print(patch_panel)
             console.print()

@@ -57,6 +57,16 @@ class StepEvent(BaseModel):
     created_at: Optional[str] = None
 
 
+class ExperienceTriad(BaseModel):
+    """Structured lesson contract adapted from Google Research Harness² (arXiv:2610.14224)."""
+    cue: str
+    lesson: str
+    evidence: str
+
+    def is_valid(self) -> bool:
+        return bool(self.cue.strip() and self.lesson.strip() and self.evidence.strip())
+
+
 class DocketItem(BaseModel):
     docket_id: str
     session_id: str
@@ -68,6 +78,7 @@ class DocketItem(BaseModel):
     initiating_prompt: str
     steps_context: List[StepEvent] = Field(default_factory=list)
     metadata: Dict[str, Any] = Field(default_factory=dict)
+    recovery_evidence: Optional[str] = None
 
 
 class TrialAccusation(BaseModel):
@@ -93,6 +104,7 @@ class IndividualVerdict(BaseModel):
     defense: TrialDefense
     judge_rationale: str
     recommended_action: Optional[str] = None
+    recovery_evidence: Optional[str] = None
 
 
 class ClassActionRuling(BaseModel):
@@ -106,6 +118,13 @@ class ClassActionRuling(BaseModel):
     evidence_summary: str
     constitutional_remedy: str
     target_rule_file: str = "AGENTS.md"
+    patch_scope: str = "DOMAIN"
+    experience: Optional[ExperienceTriad] = None
+    recovery_contrasts: List[str] = Field(default_factory=list)
+
+    @property
+    def has_valid_experience(self) -> bool:
+        return self.experience is not None and self.experience.is_valid()
 
 
 class AuditReport(BaseModel):
@@ -122,3 +141,7 @@ class AuditReport(BaseModel):
     true_friction_index: float
     verdicts: List[IndividualVerdict] = Field(default_factory=list)
     class_actions: List[ClassActionRuling] = Field(default_factory=list)
+    always_on_bytes: int = 0
+    always_on_max_bytes: int = 16384
+    entropy_budget_pct: float = 0.0
+    graduation_recommended: bool = False

@@ -29,7 +29,7 @@ from agent_court.core.courtroom import Courtroom
 from agent_court.core.docket_filter import DocketFilter
 from agent_court.core.miner import FastMiner
 from agent_court.core.models import AuditReport, DocketItem, IndividualVerdict
-from agent_court.core.plenum import SupremePlenum
+from agent_court.core.plenum import SupremePlenum, check_surface_entropy_budget
 from agent_court.reporters.html import export_html_report
 from agent_court.reporters.terminal import render_terminal_report
 
@@ -162,6 +162,7 @@ def audit(
     raw_friction_index = (raw_incidents / total_steps * 100) if total_steps > 0 else 0.0
     filtering_efficiency = (acquitted_count / raw_incidents * 100) if raw_incidents > 0 else 0.0
     true_friction_index = (convicted_count / total_steps * 100) if total_steps > 0 else 0.0
+    always_on_bytes, budget_pct, grad_rec = check_surface_entropy_budget()
 
     report = AuditReport(
         period_days=days,
@@ -175,6 +176,9 @@ def audit(
         raw_friction_index=raw_friction_index,
         filtering_efficiency=filtering_efficiency,
         true_friction_index=true_friction_index,
+        always_on_bytes=always_on_bytes,
+        entropy_budget_pct=budget_pct,
+        graduation_recommended=grad_rec,
         verdicts=verdicts,
         class_actions=class_actions,
     )

@@ -80,6 +80,38 @@ class FastMiner:
         end = min(len(steps), incident_idx + self.context_radius + 1)
         return steps[start:end]
 
+    def _extract_recovery_evidence(self, steps: List[StepEvent], incident_idx: int) -> Optional[str]:
+        """
+        Contrastive Recovery Scanner (inspired by Google Research Harness², arXiv:2610.14224,
+        adapted for zero-token post-mortem mining without multi-rollout overhead):
+        Scans up to 12 turns ahead in the same trajectory to capture the exact step where
+        the agent recovered using a legitimate delegation, MCP call, or verified file edit.
+        """
+        upper = min(len(steps), incident_idx + 13)
+        for k in range(incident_idx + 1, upper):
+            s = steps[k]
+            if s.status == "ERROR" or s.error or not s.tool_calls:
+                continue
+            for tc in s.tool_calls:
+                tname = str(tc.get("name") or "")
+                args = tc.get("args") or tc.get("arguments") or {}
+                if not isinstance(args, dict):
+                    args = {}
+                if tname == "invoke_subagent":
+                    return f"Step {s.step_index}: recovered via subagent delegation (invoke_subagent)"
+                if tname == "call_mcp_tool":
+                    srv = args.get("ServerName", "mcp")
+                    tl = args.get("ToolName", "tool")
+                    return f"Step {s.step_index}: switched to structured MCP call ({srv}.{tl})"
+                if tname in ("replace_file_content", "write_to_file"):
+                    tf = str(args.get("TargetFile", "file")).replace("\\", "/").split("/")[-1].strip("\"' ")
+                    return f"Step {s.step_index}: applied verified edit to {tf} ({tname})"
+                if tname == "run_command":
+                    cmd = str(args.get("CommandLine", ""))
+                    if any(sc in cmd for sc in ("orchestrator.py", "repo_manager.py", "manager.py", "query_runner.py", "pytest")):
+                        return f"Step {s.step_index}: executed legitimate pipeline runner ({tname})"
+        return None
+
     def mine_session(self, session_id: str, steps: List[StepEvent]) -> List[DocketItem]:
         """
         Analyzes a single session and extracts raw anomaly candidates.
@@ -126,6 +158,7 @@ class FastMiner:
                                 initiating_prompt=user_prompt,
                                 steps_context=self._get_context_window(steps, idx),
                                 metadata={"friction_snippet": content[:200]},
+                                recovery_evidence=self._extract_recovery_evidence(steps, idx),
                             )
                         )
                         docket_counter += 1
@@ -159,6 +192,7 @@ class FastMiner:
                         initiating_prompt=user_prompt,
                         steps_context=self._get_context_window(steps, idx),
                         metadata={"error_detail": error_reason},
+                        recovery_evidence=self._extract_recovery_evidence(steps, idx),
                     )
                 )
                 docket_counter += 1
@@ -185,6 +219,7 @@ class FastMiner:
                                 initiating_prompt=user_prompt,
                                 steps_context=self._get_context_window(steps, idx),
                                 metadata={"tool_name": name},
+                                recovery_evidence=self._extract_recovery_evidence(steps, idx),
                             )
                         )
                         docket_counter += 1
